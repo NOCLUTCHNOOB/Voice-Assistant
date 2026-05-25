@@ -5,6 +5,7 @@ import sys
 from gpt4all import GPT4All
 import os
 import chat_history as ch
+import visuals
 
 full_response = ""
 
@@ -27,7 +28,7 @@ if not os.path.exists(full_model_path):
     print(f"ERROR: Cannot find {model_name}")
     sys.exit(1)
 
-print("Initializing Brain... (Please wait)")
+print("Initializing... (Please wait)")
 try:
     model = GPT4All(model_name, model_path=model_path, allow_download=False, device='cpu')
     with model.chat_session():
@@ -59,7 +60,6 @@ def getcommand():
         sys.exit(1)
     except Exception as e:
         print(f"An unexpected error occurred.\nTry again.\nError details: {e}")
-        sys.exit(1)
 
 def clean_response(text):
     if "User:" in text:
@@ -85,10 +85,30 @@ if __name__ == "__main__":
     while True:
         user_input = getcommand()
         user_input_time = datetime.now()
+
+        if not user_input:
+            continue
         
         if "exit" in user_input.lower() or "quit" in user_input.lower():
             say("Goodbye, Boss.")
             break
+
+        if "show response" in user_input.lower():
+            visuals.run()
+            continue
+
+        if "close response" in user_input.lower():
+            visuals.close()
+            continue
+
+        if "erase memory" in user_input.lower():
+            try:
+                os.remove("memory.json")
+                say("Memory successfully erased")
+                continue
+            except Exception as e:
+                print("An error occured: {e}")
+                continue    
         
         if user_input:
             history_lines = []
