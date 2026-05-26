@@ -68,7 +68,6 @@ def clean_response(text):
         "<|eot_id|>", 
         "<|start_header_id|>", 
         "<|end_header_id|>",
-        "assistant"
     ]
     for t in tokens_to_remove:
         text = text.replace(t, "")
@@ -119,7 +118,7 @@ if __name__ == "__main__":
                     history_lines.append(f"<|start_header_id|>{sender}<|end_header_id|>\n\n{text}<|eot_id|>\n")
             prompt_conversation = "".join(history_lines)
             prompt = (
-                f"<|start_header_id|>system<|end_header_id|>\n\n{system_template}<|eot_id|>\n"
+                f"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_template}<|eot_id|>\n"
                 f"{prompt_conversation}"
                 f"<|start_header_id|>user<|end_header_id|>\n\n{user_input}<|eot_id|>\n"
                 f"<|start_header_id|>assistant<|end_header_id|>\n\n"
