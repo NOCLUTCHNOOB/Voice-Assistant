@@ -6,6 +6,7 @@ from gpt4all import GPT4All
 import os
 import chat_history as ch
 import visuals
+import file_path
 
 full_response = ""
 
@@ -90,6 +91,7 @@ if __name__ == "__main__":
         
         if "exit" in user_input.lower() or "quit" in user_input.lower():
             say("Goodbye, Boss.")
+            os.remove("apps.json")
             break
 
         if "show response" in user_input.lower():
@@ -107,7 +109,11 @@ if __name__ == "__main__":
                 continue
             except Exception as e:
                 print("An error occured: {e}")
-                continue    
+                continue  
+
+        if user_input.lower().startswith("open "):
+            file_path.run(user_input)
+            continue
         
         if user_input:
             history_lines = []
