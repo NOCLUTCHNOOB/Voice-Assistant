@@ -5,6 +5,7 @@ import os
 import pythoncom
 import concurrent.futures
 import difflib
+import psutil
 
 def registry():
     apps = {}
@@ -26,11 +27,11 @@ def registry():
                     display_name, _ = winreg.QueryValueEx(subkey, "DisplayName")
                     display_icon, _ = winreg.QueryValueEx(subkey, "DisplayIcon")
                     
-                    alias = display_name.lower().strip()
+                    app_name = display_name.lower().strip()
                     exe_path = display_icon.split(',')[0].strip('"')
                     
                     if exe_path.endswith('.exe') and os.path.exists(exe_path):
-                        apps[alias] = exe_path
+                        apps[app_name] = exe_path
                         
                     winreg.CloseKey(subkey)
                 except OSError:
@@ -65,8 +66,8 @@ def start_menu():
                         target_path = shortcut.Targetpath
                         
                         if target_path.endswith('.exe') and os.path.exists(target_path):
-                            alias = file.replace(".lnk", "").lower().strip()
-                            apps[alias] = target_path
+                            app_name = file.replace(".lnk", "").lower().strip()
+                            apps[app_name] = target_path
                     except Exception:
                         continue
                         
@@ -92,24 +93,24 @@ def build_memory_layer(output_file="apps.json"):
 
     final_database = system_apps.copy()    
 
-    for alias, target_path in registry_apps.items():
-        if alias not in final_database:
-            final_database[alias] = target_path
+    for app_name, target_path in registry_apps.items():
+        if app_name not in final_database:
+            final_database[app_name] = target_path
 
     collision_report = []
 
-    for alias, target_path in start_menu_apps.items():
-        original_alias = alias
+    for app_name, target_path in start_menu_apps.items():
+        original_app_name = app_name
         counter = 2
         
-        while alias in final_database and final_database[alias].lower() != target_path.lower():
-            alias = f"{original_alias} {counter}"
+        while app_name in final_database and final_database[app_name].lower() != target_path.lower():
+            app_name = f"{original_app_name} {counter}"
             counter += 1
             
-        if alias != original_alias:
-            collision_report.append(f"Saved duplicate '{original_alias}' as '{alias}'")
+        if app_name != original_app_name:
+            collision_report.append(f"Saved duplicate '{original_app_name}' as '{app_name}'")
             
-        final_database[alias] = target_path
+        final_database[app_name] = target_path
     
     with open(output_file, 'w') as f:
         json.dump(final_database, f, indent=4)
@@ -131,6 +132,15 @@ def execute_app(target_path, app_name):
         os.startfile(target_path)
     except Exception as e:
         print(f"[Luna System Error] Could not launch {app_name}: {e}")
+
+def close_app(target_path, app_name):
+    try:
+        target_name = os.path.basename(target_path).lower()
+        for app in psutil.process_iter(['pid', 'name']):
+            if app.info['name'].lower() == target_name:
+                app.kill()
+    except Exception as e:
+        print(f"Unable to close {app_name}: {e}")        
 
 def handle_voice_command(command, apps_dict, cutoff_score=0.6):
     target_app = command.lower().replace("open ", "").strip()
@@ -169,6 +179,10 @@ def handle_voice_command(command, apps_dict, cutoff_score=0.6):
     else:
         print(f"[Luna] I cannot find any installed application sounding like '{target_app}'.")
 
+def handle_closing(command, apps_dict):
+    target_app = command.lower().replace("close","").strip()  
+    close_app(apps_dict[target_app],target_app)      
+
 def run(user_input):
     json_path = "apps.json"
     if os.path.exists(json_path):
@@ -176,5 +190,7 @@ def run(user_input):
             apps_database = json.load(f)
     else:
         apps_database = build_memory_layer(json_path)
-
-    handle_voice_command(user_input, apps_database)     
+    if "open" in user_input:
+        handle_voice_command(user_input, apps_database) 
+    else:
+        handle_closing(user_input,apps_database)        

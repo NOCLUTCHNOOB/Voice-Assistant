@@ -111,7 +111,7 @@ if __name__ == "__main__":
                 print("An error occured: {e}")
                 continue  
 
-        if user_input.lower().startswith("open "):
+        if user_input.lower().startswith(("open " , "close ")):
             file_path.run(user_input)
             continue
         
