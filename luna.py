@@ -91,8 +91,12 @@ if __name__ == "__main__":
         
         if "exit" in user_input.lower() or "quit" in user_input.lower():
             say("Goodbye, Boss.")
-            os.remove("apps.json")
             break
+
+        if "refresh apps" in user_input.lower():
+            os.remove("apps.json")
+            file_path.build_memory_layer()
+            continue
 
         if "show response" in user_input.lower():
             visuals.run()

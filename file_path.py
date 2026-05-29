@@ -137,8 +137,12 @@ def close_app(target_path, app_name):
     try:
         target_name = os.path.basename(target_path).lower()
         for app in psutil.process_iter(['pid', 'name']):
-            if app.info['name'].lower() == target_name:
-                app.kill()
+            try:
+                if app.info.get('name') and app.info['name'].lower() == target_name:
+                    app.kill()
+            except Exception as e:
+                print(f"Error: {e}")
+                continue        
     except Exception as e:
         print(f"Unable to close {app_name}: {e}")        
 
@@ -151,9 +155,7 @@ def handle_voice_command(command, apps_dict, cutoff_score=0.6):
     else:
         possible_matches = difflib.get_close_matches(target_app, apps_dict.keys(), n=1, cutoff=cutoff_score)
         if possible_matches:
-            base_match = possible_matches[0]
-            print(f"[Luna System] Fuzzy Match: Understood '{target_app}' as '{base_match}'")
-            
+            base_match = possible_matches[0]            
             words = base_match.split()
             if len(words) > 1 and words[-1].isdigit():
                 base_match = " ".join(words[:-1])
@@ -165,23 +167,33 @@ def handle_voice_command(command, apps_dict, cutoff_score=0.6):
             execute_app(apps_dict[siblings[0]], siblings[0])
             
         else:
-            print(f"\n[Luna] I found multiple versions of '{base_match}':")
+            print(f"\nFound multiple versions of '{base_match}':")
             for i, sibling in enumerate(siblings):
                 print(f"  [{i + 1}] {sibling}")
                 
-            choice = input(f"[Luna] Please type the number of the one you want (1-{len(siblings)}), or 'cancel': ")
+            choice = input(f"Please type the number of the one you want (1-{len(siblings)}), or 'cancel': ")
             
             if choice.isdigit() and 1 <= int(choice) <= len(siblings):
                 selected_app = siblings[int(choice) - 1]
                 execute_app(apps_dict[selected_app], selected_app)
             else:
-                print("[Luna] Launch cancelled.")
+                print("Launch cancelled.")
     else:
-        print(f"[Luna] I cannot find any installed application sounding like '{target_app}'.")
+        print(f"Cannot find any installed application sounding like '{target_app}'.")
 
-def handle_closing(command, apps_dict):
-    target_app = command.lower().replace("close","").strip()  
-    close_app(apps_dict[target_app],target_app)      
+def handle_closing(command, apps_dict, cutoff_score=0.6):
+    target_app = command.lower().replace("close ", "").strip()      
+    base_match = None
+    if target_app in apps_dict:
+        base_match = target_app
+    else:
+        possible_matches = difflib.get_close_matches(target_app, apps_dict.keys(), n=1, cutoff=cutoff_score)
+        if possible_matches:
+            base_match = possible_matches[0]
+    if base_match:
+        close_app(apps_dict[base_match], base_match)
+    else:
+        print(f"Cannot find any running application sounding like '{target_app}' to close.")        
 
 def run(user_input):
     json_path = "apps.json"
@@ -193,4 +205,4 @@ def run(user_input):
     if "open" in user_input:
         handle_voice_command(user_input, apps_database) 
     else:
-        handle_closing(user_input,apps_database)        
+        handle_closing(user_input,apps_database)                
